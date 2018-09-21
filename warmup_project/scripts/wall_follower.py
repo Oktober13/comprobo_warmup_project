@@ -4,7 +4,6 @@
 import rospy
 import math
 import atexit
-import cv2
 
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Twist
@@ -34,8 +33,6 @@ class NeatoCallbacks(object):
 
 		average = sum(msg.ranges) / len(msg.ranges)
 		print average
-
-		cv2.HoughLines(msg.range, rho, 5, threshold[, lines[, srn[, stn]]])
 
 		for angle in range(len(msg.ranges)):
 			distance = msg.ranges[angle]
