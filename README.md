@@ -1,2 +1,22 @@
 # comprobo_warmup_project
-This is the base repo for the Olin Computational Robotics warmup project
+## Project summary
+
+## Teleoperation UI
+
+I implemented a teleoperation UI to control a Neato ground robot remotely using standard terminal input. The arrow keys control linear and angular motion, for ease of memory, the number keys change the speed of the robot, and the space bar is a large, easy-to-hit emergency stop and will cancel all motion. Pressing an arrow key begins motion, while double pressing it cancels the motion. Contradictory motions, such as moving forwards and backwards simultaneously, or changing speeds, will cancel the previous contradicting command.
+
+By isolating drive commands, it becomes possible to control both linear and angular velocities simultaneously through stdin, whereas stdin can normally only accept one keypress command at a time. This allows for intuitive, natural-looking control of the robot.
+
+Closing out of the program via CTRL-C or other handled exceptions will result in an exit handler running and cancelling the robot’s current velocity.
+
+One difficulty I encountered the process of writing this teleoperation UI was arrow key presses. Arrow keys are actually a combination of three simultaneous key presses: the ‘ESC’ key, the ‘]’ key, and a capital letter A through D. It was difficult to decode three keypresses with single character input, as each keypress was ostensibly a separate event, but was in reality one arrow keypress. While this issue would have been easily avoided by using letter keys instead, I felt strongly that using arrow keys to control motion was more intuitive.
+
+If I had more time in the future, I would make changing speeds dynamic, so that the new speed is instantly applied to the previous command(s) retroactively. In addition, I would investigate alternative keyboard inputs, such as pycharm or curses, which would capture keypresses independently, avoiding single character input bottlenecks.
+
+## Square Drive behavior
+
+## Wall Follow behavior
+
+## Person Follow behavior
+
+## Obstacle Avoidance
