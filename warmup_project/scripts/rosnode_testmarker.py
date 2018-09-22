@@ -9,14 +9,17 @@ from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
 import rospy
 
-class Sphere( object ):
+class RVizMarker( object ):
 	""" Creates a marker object"""
-	def __init__( self, timestamp, position, color ):
+	def __init__( self, timestamp, position, color, shapeType = 2, scale = Vector3( 1.0, 1.0, 1.0 ), points = None ):
 		self.frame = 0
 		self.header = Header( seq = self.frame, stamp = timestamp, frame_id = "odom")
-		self.type = 2
+		self.type = shapeType
 		self.pose = Pose()
+		# Optional parameters
 		self.color = color
+		self.scale = scale
+		self.points = points
 
 		self.marker = Marker( 
 			header = self.header,
@@ -25,11 +28,11 @@ class Sphere( object ):
 			type = self.type,
 			action = 0,
 			pose = Pose( position = position, orientation = Quaternion( 0.0, 0.0, 0.0, 0.0 ) ),
-			scale = Vector3( 1.0, 1.0, 1.0 ), # 1m diameter sphere of uniform radius
+			scale = self.scale, # 1m diameter sphere of uniform radius
 			color = self.color,
-			lifetime = rospy.Time(0.0, 0.0),
+			lifetime = rospy.Time(0.5),
 			frame_locked = False,
-			points = None,
+			points = self.points,
 			colors = None,
 			text = None,
 			mesh_resource = None,
@@ -60,7 +63,7 @@ class TestMarkerNode( object ):
 		self.pub = rospy.Publisher('/marker', Marker, queue_size = 10)
 		self.r = rospy.Rate(0.1) # 10 Hz, or 10 cycles per second.
 
-		self.sphere = Sphere( rospy.get_rostime(), Point( 1.0, 2.0, 0.0 ), self.solid_red )
+		self.sphere = RVizMarker( rospy.get_rostime(), Point( 1.0, 2.0, 0.0 ), self.solid_red )
 
 	def setMarker( self ):
 		self.sphere.updateMarker( rospy.get_rostime(), Point( 1.0, 2.0, 0.0 ), self.solid_red )

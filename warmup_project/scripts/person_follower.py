@@ -8,10 +8,14 @@ import statistics
 
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Point
 from std_msgs.msg import Header
+from std_msgs.msg import ColorRGBA
 from sensor_msgs.msg import LaserScan
 from neato_node.msg import Bump
 from nav_msgs.msg import Odometry
+from rosnode_testmarker import RVizMarker
+from visualization_msgs.msg import Marker
 
 rospy.init_node('receive_message')
 
@@ -23,7 +27,8 @@ class NeatoCallbacks(object):
 		odom = rospy.Subscriber("/odom", Odometry, self.odomCallback)
 
 		self.stopStatus = False
-		self.pose = None
+		self.position = None
+		self.orientation = None
 		self.person = {}
 		return
 
@@ -32,11 +37,9 @@ class NeatoCallbacks(object):
 
 		for angle in range(len(msg.ranges)):
 			distance = msg.ranges[angle]
-			# print str(distance) + ", " + str(average)
 			# Person will be closer to the Neato than most things.
 			if ((distance < average) and (distance != 0.0)):
 				self.person[angle] = distance
-				# print "hoi"
 		return
 
 	def bumpCallback(self, msg):
@@ -47,14 +50,15 @@ class NeatoCallbacks(object):
 		return
 
 	def odomCallback(self, msg):
-		self.pose = msg.pose.pose.orientation
+		self.orientation = msg.pose.pose.orientation
+		self.position = msg.pose.pose.position
 		return
 
 class PersonFollower(object):
 	""" Finds the closest wall and follows it at a distance of 0.5 m. """
 	def __init__(self):
-		# rospy.init_node('test_subscribe')    # initialize ourselves with roscore
-		self.pub = rospy.Publisher("/cmd_vel", Twist, queue_size = 10)
+		self.velPub = rospy.Publisher("/cmd_vel", Twist, queue_size = 10)
+		self.vizPub = rospy.Publisher('/marker', Marker, queue_size = 10)
 		self.r = rospy.Rate(10)
 
 		self.vel = Twist(Vector3(0.05, 0.00, 0.00), Vector3(0.00, 0.00, 0.00))
@@ -62,10 +66,10 @@ class PersonFollower(object):
 
 		atexit.register(self.exitHandler)
 
-	def findYaw(self, pose):
+	def findYaw(self, quaternion):
 		# Convert quaternion to Euler yaw angle.
-		if (pose != None):
-			return math.atan2(pose.z, pose.w)
+		if (quaternion != None):
+			return math.atan2(quaternion.z, quaternion.w)
 			# return (degrees) * (180 / math.pi)
 		else:
 			return 0
@@ -95,8 +99,6 @@ class PersonFollower(object):
 
 	def followPerson(self, data, yaw):
 		# Follows a large obstruction of non-zero distance in a relatively clear space
-		# print data.person.values()
-		# print data.person.keys()
 		if (data.person != {}):
 			personAngle = self.angle_normalize(statistics.mean(data.person.keys()))
 			difference = self.angle_diff(personAngle, yaw)
@@ -115,22 +117,34 @@ class PersonFollower(object):
 
 			if (self.vel.linear.x != 0):
 				self.vel.linear.x = 0.1 * (statistics.mean(data.person.values()) / max(data.person.values()))
-				print self.vel
+			return personAngle
+
+	def visualizer(self, desiredAngle, data):
+		solid_red = ColorRGBA()
+		solid_red.r, solid_red.g, solid_red.b, solid_red.a = 1.0, 0.0, 0.0, 1.0 # Opaque red
+		solid_blue = ColorRGBA()
+		solid_blue.r, solid_blue.g, solid_blue.b, solid_blue.a = 0.0, 0.0, 1.0, 1.0 # Opaque blue
+
+		if (desiredAngle is not None) and (data.position is not None):
+			theta = desiredAngle
+			person_arrow = RVizMarker(rospy.get_rostime(), None, solid_blue, 0, Vector3( 0.1, 0.2, 0.2 ), [data.position, Point( data.position.x + math.cos(theta), data.position.y + math.sin(theta), 0.0 )] )
+			self.vizPub.publish( person_arrow.marker )
 
 	def exitHandler(self):
 		# Stop robot and exit gracefully
-	    self.pub.publish(self.stopVel)
+	    self.velPub.publish(self.stopVel)
 	    print "nope nope nope"
 	    return
 
 	def run(self, data):
 		#While ros is running and bump sensor not triggered
 		while ( ( not rospy.is_shutdown()) and (data.stopStatus == False) ):
-			yaw = self.findYaw(data.pose)
-			self.followPerson(data, yaw)
-			self.pub.publish(self.vel)
+			yaw = self.findYaw(data.orientation)
+			personAngle = self.followPerson(data, yaw)
+			self.visualizer(personAngle, data)
+			self.velPub.publish(self.vel)
 			self.r.sleep()
-		self.pub.publish(self.stopVel)
+		self.velPub.publish(self.stopVel)
 		return
 
 if __name__ == '__main__':
