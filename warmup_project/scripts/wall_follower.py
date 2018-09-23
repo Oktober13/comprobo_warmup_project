@@ -12,8 +12,6 @@ from sensor_msgs.msg import LaserScan
 from neato_node.msg import Bump
 from nav_msgs.msg import Odometry
 
-rospy.init_node('receive_message')
-
 class NeatoCallbacks(object):
 	""" Useful callbacks for the neato. """
 	def __init__(self):
@@ -68,7 +66,8 @@ class WallFollower(object):
 
 		atexit.register(self.exit_handler)
 
-	def findYaw(self, pose):
+	@staticmethod
+	def findYaw(pose):
 		# Convert quaternion to Euler yaw angle. https://www.vectornav.com/docs/default-source/documentation/vn-100-documentation/AN002.pdf?sfvrsn=19ee6b9_13
 		if (pose != None):
 			# return math.atan((2 * (pose.x * pose.y + pose.z * pose.w)) / ((pose.w ** 2.0) - (pose.z ** 2.0) - (pose.y ** 2.0) + (pose.x ** 2.0)))
@@ -76,7 +75,8 @@ class WallFollower(object):
 		else:
 			return 0
 
-	def findDesiredAngle(self, data, distance, tolerance):
+	@staticmethod
+	def findDesiredAngle(data, distance, tolerance):
 		if (data.minDistance >= (distance + tolerance)): # When far away from wall, drive towards closest point on wall
 			print "minAngle: " + str(data.minAngle)
 			print data.minDistance
@@ -97,7 +97,8 @@ class WallFollower(object):
 		print "desiredAngle: " + str(desiredAngle) + ", " + "actualAngle: " + str(actualAngle)
 		return (self.desiredAngle - actualAngle)
 
-	def PID(self, currentVel, pGain, error):
+	@staticmethod
+	def PID(currentVel, pGain, error):
 		# Proportional, integrative, derivative control of the angular velocity
 		P = pGain * error
 		I = 0.0
@@ -105,7 +106,7 @@ class WallFollower(object):
 		# print error
 		return currentVel + P + I + D
 
-	def followWall(self, data, desiredDistance):
+	def courseCorrect(self, data, desiredDistance):
 		# Find yaw error and correct course by modifying angular and linear velocities
 		yawError = self.findError(data, desiredDistance)
 
@@ -127,13 +128,14 @@ class WallFollower(object):
 	def run(self, data):
 		#While ros is running and bump sensor not triggered
 		while ( ( not rospy.is_shutdown()) and (data.stopStatus == False) ):
-			self.followWall(data, 0.5)
+			self.courseCorrect(data, 0.5)
 			# self.pub.publish(self.vel)
 			self.r.sleep()
 		self.pub.publish(self.stop_vel)
 		return
 
 if __name__ == '__main__':
+	rospy.init_node('receive_message')
 	data = NeatoCallbacks()
 	node = WallFollower()
 	node.run(data)

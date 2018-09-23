@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Finds a wall, and drives along it. """
+""" Finds a person, and drives towards them. """
 
 import rospy
 import math
@@ -17,22 +17,22 @@ from nav_msgs.msg import Odometry
 from rosnode_testmarker import RVizMarker
 from visualization_msgs.msg import Marker
 
-rospy.init_node('receive_message')
-
 class NeatoCallbacks(object):
 	""" Useful callbacks for the neato. """
 	def __init__(self):
-		scan = rospy.Subscriber("/scan", LaserScan, self.laserCallback)
+		scan = rospy.Subscriber("/stable_scan", LaserScan, self.laserCallback)
 		bump = rospy.Subscriber("/bump", Bump, self.bumpCallback)
 		odom = rospy.Subscriber("/odom", Odometry, self.odomCallback)
 
 		self.stopStatus = False
 		self.position = None
 		self.orientation = None
+		self.ranges = None
 		self.person = {}
 		return
 
 	def laserCallback(self, msg):
+		self.ranges = msg.ranges
 		average = sum(msg.ranges) / len(msg.ranges) + 0.25
 
 		for angle in range(len(msg.ranges)):
@@ -119,6 +119,7 @@ class PersonFollower(object):
 				self.vel.linear.x = 0.1 * (statistics.mean(data.person.values()) / max(data.person.values()))
 			return personAngle
 
+	@staticmethod
 	def visualizer(self, desiredAngle, data):
 		solid_red = ColorRGBA()
 		solid_red.r, solid_red.g, solid_red.b, solid_red.a = 1.0, 0.0, 0.0, 1.0 # Opaque red
@@ -148,6 +149,7 @@ class PersonFollower(object):
 		return
 
 if __name__ == '__main__':
+	rospy.init_node('receive_message')
 	data = NeatoCallbacks()
 	node = PersonFollower()
 	node.run(data)
