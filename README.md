@@ -15,6 +15,13 @@ If I had more time in the future, I would make changing speeds dynamic, so that 
 
 ## Square Drive behavior
 
+I created a Neato behavior to drive in a square by intuiting that this behavior was actually the combination of two behaviors- a straight drive, and a turn. By using a timer and my knowledge of the Neato’s current linear and angular velocity, I was able to predict when the Neato had completed a side or a turn, and issue the next command in a loop.
+
+Using timers to generate the square path allowed me to quickly generate a fairly accurate square shape, but it was a fairly rigid architecture; any change in the planned path meant the Neato had no way to react or adjust its route.
+
+If I were to return to this function, I would likely base the turn timing implementation on the odometry and accelerometer. This would allow for the implementation of more complex behaviors such as regaining pose estimation after being shoved or picked up.
+
+
 ## Wall Follow behavior
 
 ## Person Follow behavior
