@@ -30,7 +30,18 @@ The wall follow behavior contains relatively simple conditions, but the overall 
 ## Person Follow behavior
 
 The person follow behaves similarly to the wall follow behavior- a 0-360 degree scan of distances is collected with the LIDAR, and the closest angle becomes the desired angle of travel. The person follow differs from the wall follower in that I got tired of trying to tune the proportional gain, so I implemented a simpler system that simply tracks whether the desired angle is less than, greater than, or equal to the current pose orientation angle, then sets the angular velocity to -max speed, max speed, and 0 respectively. The new velocity Twist message is then published to the /neato_node/cmd_vel topic at a rate of 10 times a second. This approach worked considerably better than the finicky proportional control, and I was able to capture a rosbag of the Neato following me. Once again, similar to the wall follower, the desired angle is visualized in rvis as a blue arrow pointing from the center of the Neato at the desired angle, to a point on the unit circle. Person following also ends when the program is killed or when the bump sensor is triggered, at which point a cleanup function will kill any Neato velocity and gracefully exit the program.
+One difficulty that I had was in getting the Neato to respond as quickly as I could move; my program was pretty laggy.
 
-If I had more time to revise this behavior, I would cluster the distance datapoints, constraining clusters to those about the ellipse size of human legs, which would eliminate false positives with other obstacles. I would also make speed proportional to the distance or angle that must be covered.
+If I had more time to revise this behavior, I would cluster the distance datapoints, constraining clusters to those about the ellipse size of human legs, which would eliminate false positives with other obstacles. I would also make speed proportional to the distance or angle that must be covered. Lastly, I would investigate the source of the lag, and see whether there were any parameters I could tune.
 
 ## Obstacle Avoidance
+
+I implemented a probabilistic obstacle avoidance ability. First, from 0-360 degrees, I collect the distances returned by the LIDAR scan into an array, using a ROS subscriber and a callback I wrote previously and reused. This array is converted into a series of coordinate points relative to the Neato, which is then clustered using Density Based Scanning (DBSCAN). I chose to use DBSCAN as I was looking for a clustering algorithm that would be able to generate clusters and cluster centroids without knowing the number of categories. As an algorithm centered around finding the point with the most neighbors (point density measurement), DBSCAN was ideal for this purpose, particularly as most of my clusters were elliptical or circular in shape.
+
+The coordinates of the centroid, or core sample, of each cluster were converted back into an angle, and used to generate negative normal probability distributions. A positive normal probability distribution was generated using the angle to the goal. These probabilities were all summed and the resultant array normalized. The index of the resultant array (angle of maximum probability) is our desired angle.
+
+I reused my wall follower’s proportional control code to determine the appropriate angular velocity changes to reach the desired angle.
+
+I’m still in the process of debugging this behavior- so far, the most challenging problem has been trying to identify why the desired angle is not changing as the orientation of the Neato changes.
+
+If I had more time, I would continue to debug the desired angle code, tune the rest of the PID parameters, and ensure this code can work with teleop as well.
