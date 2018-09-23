@@ -29,4 +29,8 @@ The wall follow behavior contains relatively simple conditions, but the overall 
 
 ## Person Follow behavior
 
+The person follow behaves similarly to the wall follow behavior- a 0-360 degree scan of distances is collected with the LIDAR, and the closest angle becomes the desired angle of travel. The person follow differs from the wall follower in that I got tired of trying to tune the proportional gain, so I implemented a simpler system that simply tracks whether the desired angle is less than, greater than, or equal to the current pose orientation angle, then sets the angular velocity to -max speed, max speed, and 0 respectively. The new velocity Twist message is then published to the /neato_node/cmd_vel topic at a rate of 10 times a second. This approach worked considerably better than the finicky proportional control, and I was able to capture a rosbag of the Neato following me. Once again, similar to the wall follower, the desired angle is visualized in rvis as a blue arrow pointing from the center of the Neato at the desired angle, to a point on the unit circle. Person following also ends when the program is killed or when the bump sensor is triggered, at which point a cleanup function will kill any Neato velocity and gracefully exit the program.
+
+If I had more time to revise this behavior, I would cluster the distance datapoints, constraining clusters to those about the ellipse size of human legs, which would eliminate false positives with other obstacles. I would also make speed proportional to the distance or angle that must be covered.
+
 ## Obstacle Avoidance
